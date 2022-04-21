@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import random
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
@@ -21,7 +22,7 @@ def getFeatureAndLabelMatrix(file_array, class_array):
     for file, file_class in zip(file_array, class_array):
         with open(file) as f:
             length_of_file = 0
-            #Feature matrix
+            # Feature matrix
             for line in f:
                 splitted_line = line.split(',')
                 feature_matrix.append([1] + [float(element) for element in splitted_line])
@@ -47,7 +48,7 @@ def split_dataset(x_matrix, t_matrix, split_index):
     :return: feature and label matrix with split_index amount of data points removed from each class,
             and feature and label matrix with split_index amount of data points
     """
-    #array with class
+    # array with class
     classes = getActualClass(t_matrix, axis=1)
 
     new_x_matrix = []
@@ -57,10 +58,10 @@ def split_dataset(x_matrix, t_matrix, split_index):
         class_indicies = np.where(classes == current_class)[0]
         all_class_indicies = np.append(all_class_indicies, class_indicies[:split_index])
         for i in range(split_index):
-            #feature
+            # feature
             new_x_matrix.append(x_matrix[class_indicies[i]])
 
-            #label
+            # label
             new_t_matrix.append(t_matrix[class_indicies[i]])
     x_matrix = np.delete(x_matrix, all_class_indicies, axis=0)
     t_matrix = np.delete(t_matrix, all_class_indicies, axis=0)
@@ -69,6 +70,7 @@ def split_dataset(x_matrix, t_matrix, split_index):
 
 def remove_feature(x_matrix, feature_index):
     return np.delete(x_matrix, feature_index, axis=1)
+
 
 def z(W, x):
     """
@@ -163,7 +165,7 @@ def sum_MSE_grad_W(W, x_matrix, t_matrix):
 
 
 def MSE(g_matrix, t_matrix):
-    return np.sum(np.power(g_matrix - t_matrix, 2))
+    return np.mean(np.power(g_matrix - t_matrix, 2))
 
 
 def getPredictedClass(g, axis=None):
@@ -237,9 +239,8 @@ def plot_incorrect_and_correct(W, x_matrix, t_matrix, class_names, feature_names
 
         color = colors[actual]
 
-        for i in range(5-len(x)):
+        for i in range(5 - len(x)):
             x = np.append(x, 0)
-        print(x)
         plt.subplot(2, 1, 1)
         plt.plot(x[1], x[2], marker=sign, c=color)
         plt.subplot(2, 1, 2)
@@ -260,9 +261,9 @@ def plot_confusion_matrix(g_matrix, t_matrix, class_names):
 
     ax = sns.heatmap(confusion_matrix, annot=True, cmap='Blues')
 
-    ax.set_title('Seaborn Confusion Matrix with labels\n\n');
-    ax.set_xlabel('\nPredicted Values')
-    ax.set_ylabel('Actual Values ')
+    ax.set_title('Confusion matrix\n\n');
+    ax.set_xlabel('\nPredicted labels')
+    ax.set_ylabel('Actual labels')
 
     ax.xaxis.set_ticklabels(class_names)
     ax.yaxis.set_ticklabels(class_names)
@@ -275,40 +276,49 @@ def plot_histogram(x_matrix, t_matrix, class_names, feature_names, hist_range, s
 
     for feature in range(1, len(x_matrix[0])):
         fig, ax = plt.subplots()
-        ax.set_title(feature_names[feature-1])
-        for current_class in range(max(classes)+1):
+        ax.set_title(feature_names[feature - 1])
+        for current_class in range(max(classes) + 1):
             class_indicies = np.where(classes == current_class)[0]
             feature_with_class = x_matrix[class_indicies]
-            ax.hist(feature_with_class[:, feature], alpha=0.5, stacked=True, bins=np.arange(hist_range[0], hist_range[1], step), label=class_names[current_class])
-    plt.legend()
+            ax.hist(feature_with_class[:, feature], alpha=0.5, stacked=True,
+                    bins=np.arange(hist_range[0], hist_range[1], step), label=class_names[current_class])
+        plt.legend()
     plt.show()
 
-    # Show plot
+
+def plot_MSE_and_error_rate(mse_array, error_rate_array, sample_size, title=None):
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    fig.suptitle(title)
+
+    ax1.set(ylabel = "Mean square error")
+    ax1.plot(np.arange(len(mse_array)) / 10, mse_array)
+
+    percent_error_rate_array = 100 * np.array(error_rate_array) / sample_size
+    ax2.set(ylabel="Error rate", xlabel="Iterations")
+    ax2.yaxis.set_major_formatter(mtick.PercentFormatter())
+    ax2.plot(np.arange(len(error_rate_array)) / 10, percent_error_rate_array)
     plt.show()
 
 
 def main():
-    #Set-up
+    # Set-up
     class_names = ['Setosa', 'Versicolor', 'Virginia']
     feature_names = ['Sepal length', 'Sepal width', 'Petal length', 'Petal width']
 
-    file_array = [f'class_{i}' for i in range(1, 3 + 1)]
+    file_array = [f'class_{i + 1}' for i in range(3)]  # 3 files
     class_array = [i for i in range(len(file_array))]
 
     x_matrix, t_matrix = getFeatureAndLabelMatrix(file_array, class_array)
 
-    #Task 1 - a)
+
+    # Task 1 - a)
 
     training_x_matrix, training_t_matrix, test_x_matrix, test_t_matrix \
         = split_dataset(x_matrix, t_matrix, 20)
 
-    print("Training set:", len(training_x_matrix), len(training_t_matrix))
-    print("Test set:", len(test_x_matrix), len(test_t_matrix))
-    input("Press any key to contiune to b)")
-
     # - b)
 
-    num_of_iterations = 1000
+    num_of_iterations = 100
     step_size = 0.01
 
     print("Training linear classifer with alpha =", step_size, "and", num_of_iterations, "iterations.")
@@ -317,9 +327,8 @@ def main():
     features = len(x_matrix[0]) - 1
     W_array = [np.zeros(shape=(classes, features + 1))]
     for i in range(num_of_iterations):
-        W_array = np.append(W_array, train_linear_classifier_iteration(W_array[-1],
-                                                                       training_x_matrix, training_t_matrix,
-                                                                       alpha=step_size), axis=0)
+        new_W = train_linear_classifier_iteration(W_array[-1], training_x_matrix, training_t_matrix, alpha=step_size)
+        W_array = np.append(W_array, new_W, axis=0)
 
     print("Linear classifer trained.")
     print("For the test set we get MSE and error rate:")
@@ -332,20 +341,14 @@ def main():
         mse_array.append(MSE(test_g_matrix, test_t_matrix))
         error_rate_array.append(error_rate(test_g_matrix, test_t_matrix))
 
-    plt.subplot(2, 1, 1)
-    plt.title("MSE")
-    plt.plot(np.arange(len(mse_array)) / 10, mse_array)
-    plt.subplot(2, 1, 2)
-    plt.title("Error rate")
-    plt.plot(np.arange(len(mse_array)) / 10, error_rate_array)
-    plt.show()
+    sample_size = len(test_x_matrix)
+    plot_MSE_and_error_rate(mse_array, error_rate_array, sample_size, title="Test set")
 
     print("and confusion matrix:")
 
     test_g_matrix = np.transpose(g(W_array[-1], np.transpose(test_x_matrix)))
     plot_confusion_matrix(test_g_matrix, test_t_matrix, class_names)
-
-    input("Press any key to continue to c) and see the same for training set")
+    plot_incorrect_and_correct(W_array[-1], test_x_matrix, test_t_matrix, class_names, feature_names)
 
     # - c)
     print("For the training set we get MSE and error rate:")
@@ -358,13 +361,7 @@ def main():
         mse_array.append(MSE(training_g_matrix, training_t_matrix))
         error_rate_array.append(error_rate(training_g_matrix, training_t_matrix))
 
-    plt.subplot(2, 1, 1)
-    plt.title("MSE")
-    plt.plot(np.arange(len(mse_array)) / 10, mse_array)
-    plt.subplot(2, 1, 2)
-    plt.title("Error rate")
-    plt.plot(np.arange(len(mse_array)) / 10, error_rate_array)
-    plt.show()
+    plot_MSE_and_error_rate(mse_array, error_rate_array, title = "Training set")
 
     print("and confusion matrix:")
 
@@ -374,8 +371,7 @@ def main():
     # - d)
     print("Thoughts?")
 
-
-    #2 - a)
+    # 2 - a)
     print("Plotting histograms")
     plot_histogram(x_matrix, t_matrix, class_names, feature_names, hist_range=[0, 10], step=0.2)
 
@@ -395,13 +391,12 @@ def main():
 
     training_x_matrix, training_t_matrix, test_x_matrix, test_t_matrix = split_dataset(x_matrix, t_matrix, 20)
 
-
     training_x_matrix, training_t_matrix = shuffle_in_unison(training_x_matrix, training_t_matrix, seed=100)
     test_x_matrix, test_t_matrix = shuffle_in_unison(training_x_matrix, training_t_matrix, seed=100)
 
     print("Shuffled matricies")
 
-    #plot_histogram(x_matrix, t_matrix, class_names, feature_names, hist_range=[0, 10], step=0.2)
+    # plot_histogram(x_matrix, t_matrix, class_names, feature_names, hist_range=[0, 10], step=0.2)
 
     print(training_t_matrix)
     print(training_x_matrix)
@@ -413,7 +408,8 @@ def main():
     W_array = [np.zeros(shape=(classes, features + 1))]
     for i in range(num_of_iterations):
         W_array = np.append(W_array, train_linear_classifier_iteration(W_array[-1],
-                                training_x_matrix, training_t_matrix, alpha=0.01), axis=0)
+                                                                       training_x_matrix, training_t_matrix,
+                                                                       alpha=0.01), axis=0)
 
     print("Ws caluclated")
 
@@ -436,10 +432,10 @@ def main():
 
     plt.subplot(2, 1, 1)
     plt.title("MSE")
-    plt.plot(np.arange(len(mse_array))/10, mse_array)
+    plt.plot(np.arange(len(mse_array)) / 10, mse_array)
     plt.subplot(2, 1, 2)
     plt.title("Error rate")
-    plt.plot(np.arange(len(mse_array))/10, error_rate_array)
+    plt.plot(np.arange(len(mse_array)) / 10, error_rate_array)
     plt.show()
 
 
